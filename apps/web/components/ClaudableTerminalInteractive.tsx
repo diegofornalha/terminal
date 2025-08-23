@@ -1,229 +1,140 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
-import { WebLinksAddon } from '@xterm/addon-web-links';
 import '@xterm/xterm/css/xterm.css';
 
-interface ClaudableTerminalInteractiveProps {
-  projectId?: string;
-  onAuthenticated?: () => void;
-}
-
-export default function ClaudableTerminalInteractive({ 
-  projectId = 'global',
-  onAuthenticated 
-}: ClaudableTerminalInteractiveProps) {
+export default function ClaudableTerminalInteractive() {
   const terminalRef = useRef<HTMLDivElement>(null);
-  const terminal = useRef<Terminal | null>(null);
-  const fitAddon = useRef<FitAddon | null>(null);
-  const ws = useRef<WebSocket | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [isSessionStarted, setIsSessionStarted] = useState(false);
-  const [sessionId, setSessionId] = useState<string>('');
-
-  // Gerar ou recuperar sessionId único
-  useEffect(() => {
-    const storedSessionId = localStorage.getItem(`terminal_session_${projectId}`);
-    if (storedSessionId) {
-      setSessionId(storedSessionId);
-    } else {
-      const newSessionId = `${projectId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      localStorage.setItem(`terminal_session_${projectId}`, newSessionId);
-      setSessionId(newSessionId);
-    }
-  }, [projectId]);
+  const terminalInstance = useRef<Terminal | null>(null);
 
   useEffect(() => {
-    if (!terminalRef.current || !sessionId) return;
+    if (!terminalRef.current || terminalInstance.current) return;
 
-    // Pequeno delay para garantir que o DOM está pronto
-    const timer = setTimeout(() => {
-      if (!terminalRef.current) return;
-      
-      // Cria o terminal xterm.js
-      terminal.current = new Terminal({
-        cursorBlink: true,
-        fontSize: 14,
-        fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-        theme: {
-          background: '#000000',
-          foreground: '#d4d4d4',
-          cursor: '#d4d4d4',
-          black: '#000000',
-          red: '#cd3131',
-          green: '#0dbc79',
-          yellow: '#e5e510',
-          blue: '#2472c8',
-          magenta: '#bc3fbc',
-          cyan: '#11a8cd',
-          white: '#e5e5e5',
-          brightBlack: '#666666',
-          brightRed: '#f14c4c',
-          brightGreen: '#23d18b',
-          brightYellow: '#f5f543',
-          brightBlue: '#3b8eea',
-          brightMagenta: '#d670d6',
-          brightCyan: '#29b8db',
-          brightWhite: '#e5e5e5'
-        },
-        allowProposedApi: true
-      });
-
-      // Adiciona addons
-      fitAddon.current = new FitAddon();
-      terminal.current.loadAddon(fitAddon.current);
-      terminal.current.loadAddon(new WebLinksAddon());
-
-      // Abre o terminal no elemento DOM
-      terminal.current.open(terminalRef.current);
-      
-      // Aguarda o próximo frame antes de fazer fit
-      requestAnimationFrame(() => {
-        if (fitAddon.current) {
-          try {
-            fitAddon.current.fit();
-          } catch (e) {
-            console.warn('Erro inicial ao ajustar terminal:', e);
-            // Tenta novamente após um pequeno delay
-            setTimeout(() => {
-              if (fitAddon.current) {
-                try {
-                  fitAddon.current.fit();
-                } catch (e2) {
-                  console.warn('Erro ao ajustar terminal (segunda tentativa):', e2);
-                }
-              }
-            }, 100);
-          }
-        }
-      });
-
-      // Conecta ao WebSocket
-      connectWebSocket();
-    }, 50);
-
-    // Redimensiona o terminal quando a janela muda
-    const handleResize = () => {
-      if (fitAddon.current && terminal.current) {
-        try {
-          fitAddon.current.fit();
-          if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-            const dims = fitAddon.current.proposeDimensions();
-            if (dims) {
-              ws.current.send(JSON.stringify({
-                type: 'resize',
-                rows: dims.rows,
-                cols: dims.cols
-              }));
-            }
-          }
-        } catch (e) {
-          console.warn('Erro ao redimensionar terminal:', e);
-        }
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('resize', handleResize);
-      if (ws.current) {
-        ws.current.close();
-      }
-      if (terminal.current) {
-        terminal.current.dispose();
-      }
-    };
-  }, [sessionId]);
-
-  const connectWebSocket = () => {
-    // Detecta o protocolo correto baseado na página atual
-    const isSecure = window.location.protocol === 'https:';
-    const wsProtocol = isSecure ? 'wss:' : 'ws:';
-    
-    // Se estiver em HTTPS, usa o mesmo host da página (com proxy)
-    // Se estiver em HTTP, pode conectar diretamente na API
-    let wsUrl;
-    if (isSecure) {
-      // Em HTTPS, usa o mesmo host/porta da aplicação web
-      wsUrl = `${wsProtocol}//${window.location.host}/ws/terminal/interactive/${projectId}`;
-    } else {
-      // Em HTTP, pode usar a variável de ambiente ou conectar diretamente
-      const apiHost = process.env.NEXT_PUBLIC_WS_BASE || `${wsProtocol}//${window.location.hostname}:8000`;
-      wsUrl = `${apiHost}/ws/terminal/interactive/${projectId}`;
-    }
-    
-    ws.current = new WebSocket(wsUrl);
-
-    ws.current.onopen = () => {
-      console.log('Terminal interativo conectado');
-      setIsConnected(true);
-      
-      // Inicia sessão com shell padrão
-      ws.current?.send(JSON.stringify({
-        type: 'start'
-        // Sem comando específico, usa o shell padrão
-      }));
-    };
-
-    ws.current.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        
-        if (data.type === 'output' && terminal.current) {
-          // Escreve o output no terminal
-          terminal.current.write(data.data);
-        } else if (data.type === 'session_started') {
-          setIsSessionStarted(data.success);
-          // Terminal pronto, sem mensagem adicional
-        } else if (data.type === 'error') {
-          terminal.current?.writeln(`\\r\\n\\x1b[31mErro: ${data.message}\\x1b[0m`);
-        }
-      } catch (e) {
-        // Se não for JSON, trata como texto puro
-        if (terminal.current) {
-          terminal.current.write(event.data);
-        }
-      }
-    };
-
-    ws.current.onclose = () => {
-      console.log('Terminal desconectado');
-      setIsConnected(false);
-      setIsSessionStarted(false);
-      terminal.current?.writeln('\\r\\n\\x1b[33mDesconectado. Recarregue a página para reconectar.\\x1b[0m');
-    };
-
-    ws.current.onerror = (error) => {
-      console.error('Erro no WebSocket:', error);
-      setIsConnected(false);
-    };
-  };
-
-  // Captura input do terminal e envia ao backend
-  useEffect(() => {
-    if (!terminal.current) return;
-
-    const disposable = terminal.current.onData((data) => {
-      if (ws.current && ws.current.readyState === WebSocket.OPEN && isSessionStarted) {
-        // Envia o input para o backend
-        ws.current.send(JSON.stringify({
-          type: 'input',
-          data: data
-        }));
+    // Criar terminal
+    const terminal = new Terminal({
+      cursorBlink: true,
+      fontSize: 14,
+      fontFamily: 'monospace',
+      theme: {
+        background: '#1e1e1e',
+        foreground: '#d4d4d4'
       }
     });
+    
+    const fitAddon = new FitAddon();
+    terminal.loadAddon(fitAddon);
+    terminal.open(terminalRef.current);
+    
+    // Ajustar tamanho
+    setTimeout(() => fitAddon.fit(), 100);
+    
+    // Mensagem inicial
+    terminal.writeln('🚀 Terminal System - Simples e Funcional');
+    terminal.writeln('Conectando...\n');
+
+    // WebSocket com detecção de protocolo
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsHost = window.location.protocol === 'https:' 
+      ? window.location.host 
+      : `${window.location.hostname}:8000`;
+    const wsUrl = `${wsProtocol}//${wsHost}/ws/terminal/default`;
+
+    console.log('Conectando WebSocket:', wsUrl);
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => {
+      console.log('WebSocket conectado');
+      terminal.writeln('✅ Conectado!');
+      terminal.write('$ ');
+      
+      // Buffer para comandos
+      let commandBuffer = '';
+      
+      terminal.onData((data) => {
+        // Enter - enviar comando
+        if (data === '\r' || data === '\n') {
+          if (commandBuffer.trim()) {
+            terminal.write('\r\n');
+            ws.send(JSON.stringify({ 
+              type: 'command', 
+              command: commandBuffer.trim()
+            }));
+            commandBuffer = '';
+          } else {
+            terminal.write('\r\n$ ');
+          }
+        }
+        // Backspace
+        else if (data === '\u007F' || data === '\b') {
+          if (commandBuffer.length > 0) {
+            commandBuffer = commandBuffer.slice(0, -1);
+            terminal.write('\b \b');
+          }
+        }
+        // Caractere normal
+        else if (data.charCodeAt(0) >= 32) {
+          commandBuffer += data;
+          terminal.write(data);
+        }
+      });
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const msg = JSON.parse(event.data);
+        
+        switch(msg.type) {
+          case 'init':
+            console.log('Terminal inicializado');
+            break;
+            
+          case 'output':
+            if (msg.output) {
+              terminal.write(msg.output);
+              if (!msg.output.endsWith('\n')) {
+                terminal.write('\r\n');
+              }
+            }
+            terminal.write('$ ');
+            break;
+            
+          case 'error':
+            terminal.writeln(`\r\n❌ Erro: ${msg.message}`);
+            terminal.write('$ ');
+            break;
+        }
+      } catch {
+        terminal.write(event.data);
+      }
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket erro:', error);
+      terminal.writeln('\r\n❌ Erro de conexão');
+    };
+
+    ws.onclose = () => {
+      terminal.writeln('\r\n⚠️ Desconectado');
+    };
+
+    // Redimensionar
+    const handleResize = () => fitAddon.fit();
+    window.addEventListener('resize', handleResize);
+
+    terminalInstance.current = terminal;
 
     return () => {
-      disposable.dispose();
+      window.removeEventListener('resize', handleResize);
+      ws.close();
+      terminal.dispose();
+      terminalInstance.current = null;
     };
-  }, [isSessionStarted]);
+  }, []);
 
   return (
-    <div className="w-full h-full bg-black">
+    <div className="w-full h-full bg-black p-2">
       <div ref={terminalRef} className="w-full h-full" />
     </div>
   );

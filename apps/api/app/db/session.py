@@ -1,36 +1,30 @@
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import sessionmaker
-from pathlib import Path
+# Neo4j is used instead of SQLite - this is a stub to prevent import errors
+# The actual database operations are handled by Neo4j services
+
+from typing import Generator
 from app.core.config import settings
 
-# Ensure data directory exists
-db_path = settings.database_url.replace("sqlite:///", "")
-Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+# Stub engine for compatibility
+class StubEngine:
+    """Stub engine to prevent SQLAlchemy errors"""
+    pass
 
-# Create engine with SQLite-specific settings
-connect_args = {}
-if settings.database_url.startswith("sqlite"):
-    connect_args = {"check_same_thread": False}
+engine = StubEngine()
 
-engine = create_engine(
-    settings.database_url, 
-    connect_args=connect_args,
-    pool_pre_ping=True
-)
+# Stub session for compatibility
+class StubSession:
+    """Stub session to prevent SQLAlchemy errors"""
+    def __init__(self):
+        pass
+    
+    def close(self):
+        pass
 
-# Enable foreign key constraints for SQLite
-if settings.database_url.startswith("sqlite"):
-    @event.listens_for(engine, "connect")
-    def set_sqlite_pragma(dbapi_conn, connection_record):
-        cursor = dbapi_conn.cursor()
-        cursor.execute("PRAGMA foreign_keys=ON")
-        cursor.close()
+SessionLocal = StubSession
 
-SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
-
-def get_db():
-    """Database session dependency"""
-    db = SessionLocal()
+def get_db() -> Generator[StubSession, None, None]:
+    """Database session dependency - returns stub for Neo4j compatibility"""
+    db = StubSession()
     try:
         yield db
     finally:

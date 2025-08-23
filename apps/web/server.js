@@ -26,18 +26,32 @@ app.prepare().then(() => {
   const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://api:8000';
   console.log('API base for proxy:', apiBase);
   
-  const wsProxy = createProxyMiddleware('/ws', {
-    target: apiBase,
+  // Convert http to ws for WebSocket proxy
+  const wsTarget = apiBase.replace(/^http/, 'ws');
+  console.log('WebSocket target:', wsTarget);
+  
+  // WebSocket proxy using native Node.js proxy
+  const { createProxyServer } = require('http-proxy');
+  const proxy = createProxyServer({
+    target: wsTarget,
     ws: true,
-    changeOrigin: true,
-    logLevel: 'debug',
+    changeOrigin: true
+  });
+
+  // Handle proxy errors
+  proxy.on('error', (err, req, res) => {
+    console.error('WebSocket proxy error:', err);
+    if (res.writeHead) {
+      res.writeHead(502, { 'Content-Type': 'text/plain' });
+      res.end('WebSocket proxy error');
+    }
   });
 
   // Handle WebSocket upgrade
   server.on('upgrade', (req, socket, head) => {
     console.log('WebSocket upgrade request:', req.url);
     if (req.url && req.url.startsWith('/ws/')) {
-      wsProxy.upgrade(req, socket, head);
+      proxy.ws(req, socket, head);
     }
   });
 

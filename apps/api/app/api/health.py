@@ -81,7 +81,9 @@ async def neo4j_health_check() -> Dict[str, Any]:
     try:
         uri = os.getenv("NEO4J_URI", "bolt://terminal-neo4j:7687")
         user = os.getenv("NEO4J_USERNAME", "neo4j")
-        password = os.getenv("NEO4J_PASSWORD", "password")
+        password = os.getenv("NEO4J_PASSWORD")
+        if not password:
+            return {"status": "unhealthy", "error": "NEO4J_PASSWORD not configured"}
         database = os.getenv("NEO4J_DATABASE", "neo4j")
         
         driver = GraphDatabase.driver(uri, auth=(user, password))
@@ -176,7 +178,9 @@ async def check_neo4j_status() -> str:
     try:
         uri = os.getenv("NEO4J_URI", "bolt://terminal-neo4j:7687")
         user = os.getenv("NEO4J_USERNAME", "neo4j")
-        password = os.getenv("NEO4J_PASSWORD", "password")
+        password = os.getenv("NEO4J_PASSWORD")
+        if not password:
+            return "not configured"
         
         driver = GraphDatabase.driver(uri, auth=(user, password))
         driver.verify_connectivity()

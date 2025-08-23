@@ -27,8 +27,14 @@ if [ -d "/app/mcp-neo4j-agent-memory" ]; then
 # Wrapper global para MCP Neo4j Agent Memory
 export NEO4J_URI="${NEO4J_URI:-bolt://terminal-neo4j:7687}"
 export NEO4J_USERNAME="${NEO4J_USERNAME:-neo4j}"
-export NEO4J_PASSWORD="${NEO4J_PASSWORD:-password}"
+export NEO4J_PASSWORD="${NEO4J_PASSWORD}"
 export NEO4J_DATABASE="${NEO4J_DATABASE:-neo4j}"
+
+# Verificar se a senha está configurada
+if [ -z "$NEO4J_PASSWORD" ]; then
+    echo "Erro: NEO4J_PASSWORD não está configurada" >&2
+    exit 1
+fi
 
 # Detectar contexto do projeto se em worktree
 if [ -d .git ] || [ -f .git ]; then

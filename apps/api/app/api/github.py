@@ -135,10 +135,10 @@ async def connect_github_repository(
             # Use repo subfolder
             repo_path = os.path.join(project.repo_path, "repo")
         else:
-            # Use standard project structure: ./data/projects/{project_id}/repo
+            # Use standard project structure: ./projects/{project_id}/repo
             from pathlib import Path
             root_dir = Path(__file__).parent.parent.parent.parent  # Get to cc-lovable root
-            repo_path = root_dir / "data" / "projects" / project.id / "repo"
+            repo_path = root_dir / "projects" / project.id / "repo"
             repo_path = str(repo_path.resolve())
             
             if not os.path.exists(repo_path):

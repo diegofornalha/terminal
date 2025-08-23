@@ -139,9 +139,8 @@ def create_project_metadata(project_id: str, name: str):
         name: Project name
     """
     
-    # Create data directory structure
-    data_dir = os.path.join(settings.projects_root, project_id, "data")
-    metadata_dir = os.path.join(data_dir, "metadata")
+    # Create metadata directory structure (no data folder at root level)
+    metadata_dir = os.path.join(settings.projects_root, project_id, "metadata")
     ensure_dir(metadata_dir)
     
     metadata_data = {
@@ -173,7 +172,7 @@ async def parse_and_update_project_metadata(project_id: str, db_session) -> dict
         dict: Parsed project information
     """
     
-    metadata_path = os.path.join(settings.projects_root, project_id, "data", "metadata", f"{project_id}.json")
+    metadata_path = os.path.join(settings.projects_root, project_id, "metadata", f"{project_id}.json")
     
     if not os.path.exists(metadata_path):
         raise Exception(f"Metadata file not found at {metadata_path}")
@@ -212,7 +211,7 @@ async def parse_and_update_project_metadata(project_id: str, db_session) -> dict
 
 def get_metadata_path(project_id: str) -> str:
     """Get the metadata file path for a project"""
-    return os.path.join(settings.projects_root, project_id, "data", "metadata", f"{project_id}.json")
+    return os.path.join(settings.projects_root, project_id, "metadata", f"{project_id}.json")
 
 
 def setup_claude_config(project_path: str):

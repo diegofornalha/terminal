@@ -4,22 +4,49 @@ from app.claudable_terminal.terminal_interactive import InteractiveTerminal
 import asyncio
 import json
 from typing import Dict
+from datetime import datetime, timedelta
 
 router = APIRouter()
 
-# Armazena sessões ativas
-active_sessions: Dict[str, InteractiveTerminal] = {}
+# Armazena sessões ativas com timestamp
+active_sessions: Dict[str, Dict] = {}
 
-@router.websocket("/ws/terminal/interactive/{project_id}")
-async def terminal_interactive_websocket(websocket: WebSocket, project_id: str):
-    """WebSocket para terminal interativo com PTY"""
+# Limpa sessões inativas após 1 hora
+SESSION_TIMEOUT_HOURS = 1
+
+async def cleanup_inactive_sessions():
+    """Remove sessões inativas"""
+    current_time = datetime.now()
+    to_remove = []
+    
+    for session_id, session_data in active_sessions.items():
+        if current_time - session_data['last_activity'] > timedelta(hours=SESSION_TIMEOUT_HOURS):
+            terminal = session_data['terminal']
+            if terminal.is_alive():
+                await terminal.close_session()
+            to_remove.append(session_id)
+    
+    for session_id in to_remove:
+        active_sessions.pop(session_id, None)
+
+@router.websocket("/ws/terminal/interactive/{session_id}")
+async def terminal_interactive_websocket(websocket: WebSocket, session_id: str):
+    """WebSocket para terminal interativo com PTY persistente"""
     await websocket.accept()
     
     # Cria ou recupera a sessão
-    if project_id not in active_sessions:
-        active_sessions[project_id] = InteractiveTerminal(project_id)
+    if session_id not in active_sessions:
+        active_sessions[session_id] = {
+            'terminal': InteractiveTerminal(session_id),
+            'last_activity': datetime.now(),
+            'created_at': datetime.now()
+        }
+        is_new_session = True
+    else:
+        is_new_session = False
+        active_sessions[session_id]['last_activity'] = datetime.now()
     
-    terminal = active_sessions[project_id]
+    terminal = active_sessions[session_id]['terminal']
     
     # Task para ler output continuamente
     async def read_output_task():
@@ -45,14 +72,28 @@ async def terminal_interactive_websocket(websocket: WebSocket, project_id: str):
             data = await websocket.receive_json()
             
             if data['type'] == 'start':
-                # Inicia sessão com comando específico (ex: 'claude')
-                command = data.get('command')
-                result = await terminal.start_session(command)
-                await websocket.send_json({
-                    'type': 'session_started',
-                    'success': result['success'],
-                    'message': result.get('message', '')
-                })
+                # Se é uma nova sessão, inicia o terminal
+                # Se é reconexão, apenas confirma
+                if is_new_session or not terminal.is_alive():
+                    command = data.get('command')
+                    result = await terminal.start_session(command)
+                    await websocket.send_json({
+                        'type': 'session_started',
+                        'success': result['success'],
+                        'message': result.get('message', ''),
+                        'reconnected': False
+                    })
+                else:
+                    # Sessão já existe e está ativa - reconexão
+                    await websocket.send_json({
+                        'type': 'session_started',
+                        'success': True,
+                        'message': 'Reconectado à sessão existente',
+                        'reconnected': True
+                    })
+                
+                # Atualiza atividade
+                active_sessions[session_id]['last_activity'] = datetime.now()
                 
             elif data['type'] == 'input':
                 # Envia input para o terminal
@@ -81,6 +122,10 @@ async def terminal_interactive_websocket(websocket: WebSocket, project_id: str):
         # Cancela a task de output
         output_task.cancel()
         
-        # Remove sessão inativa
-        if not terminal.is_alive():
-            active_sessions.pop(project_id, None)
+        # NÃO remove a sessão ao desconectar - mantém para reconexão
+        # Apenas atualiza timestamp
+        if session_id in active_sessions:
+            active_sessions[session_id]['last_activity'] = datetime.now()
+        
+        # Agenda limpeza de sessões inativas
+        asyncio.create_task(cleanup_inactive_sessions())

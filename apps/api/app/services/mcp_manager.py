@@ -14,7 +14,9 @@ class MCPManager:
         self.mcp_path = "/app/mcp-neo4j-agent-memory"
         self.neo4j_uri = os.getenv("NEO4J_URI", "bolt://terminal-neo4j:7687")
         self.neo4j_user = os.getenv("NEO4J_USERNAME", "neo4j")
-        self.neo4j_password = os.getenv("NEO4J_PASSWORD", "password")
+        self.neo4j_password = os.getenv("NEO4J_PASSWORD")
+        if not self.neo4j_password:
+            raise ValueError("NEO4J_PASSWORD environment variable is required")
         self.neo4j_database = os.getenv("NEO4J_DATABASE", "neo4j")
     
     def setup_for_worktree(self, project_id: str, branch_name: str) -> Dict[str, str]:

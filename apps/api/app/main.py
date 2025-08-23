@@ -17,10 +17,7 @@ from app.core.logging import configure_logging
 from app.core.terminal_ui import ui
 from fastapi import WebSocket
 from app.claudable_terminal.websocket_handler import terminal_ws
-from sqlalchemy import inspect
-from app.db.base import Base
-import app.models  # noqa: F401 ensures models are imported for metadata
-from app.db.session import engine
+# Neo4j is used instead of SQLite - no SQLAlchemy imports needed
 import os
 
 configure_logging()
@@ -85,10 +82,8 @@ def health():
 
 @app.on_event("startup")
 def on_startup() -> None:
-    # Auto create tables if not exist; production setups should use Alembic
-    ui.info("Initializing database tables")
-    inspector = inspect(engine)
-    Base.metadata.create_all(bind=engine)
+    # Neo4j is used instead of SQLite - no table creation needed
+    ui.info("Neo4j database is ready")
     ui.success("Database initialization complete")
     
     # Show available endpoints

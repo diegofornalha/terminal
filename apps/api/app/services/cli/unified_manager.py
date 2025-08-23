@@ -30,7 +30,7 @@ def get_display_path(file_path: str) -> str:
         if file_path.startswith(project_root):
             # Remove project root from path
             display_path = file_path.replace(project_root + "/", "")
-            return display_path.replace("data/projects/", "…/")
+            return display_path.replace("projects/", "…/")
     except Exception:
         pass
     return file_path
@@ -643,161 +643,9 @@ node_modules/
                 #     # Send initial query
                 #     await client.query(instruction)
                 raise Exception("Claude SDK not available")
-                    
+                
                 # The following code is disabled due to missing module
-                # # Stream responses and extract session_id
-                # claude_session_id = None
-                # 
-                # async for message_obj in client.receive_messages():
-                        
-                        # Import SDK types for isinstance checks
-                        try:
-                            from anthropic.claude_code.types import SystemMessage, AssistantMessage, UserMessage, ResultMessage
-                        except ImportError:
-                            try:
-                                from claude_code_sdk.types import SystemMessage, AssistantMessage, UserMessage, ResultMessage
-                            except ImportError:
-                                # Fallback - check type name strings
-                                SystemMessage = type(None)
-                                AssistantMessage = type(None)
-                                UserMessage = type(None)
-                                ResultMessage = type(None)
-                        
-                        # Handle SystemMessage for session_id extraction
-                        if (isinstance(message_obj, SystemMessage) or 
-                            'SystemMessage' in str(type(message_obj))):
-                            # Extract session_id if available
-                            if hasattr(message_obj, 'session_id') and message_obj.session_id:
-                                claude_session_id = message_obj.session_id
-                                await self.set_session_id(project_id, claude_session_id)
-                            
-                            # Send init message (hidden from UI)
-                            init_message = Message(
-                                id=str(uuid.uuid4()),
-                                project_id=project_path,
-                                role="system",
-                                message_type="system",
-                                content=f"Claude Code SDK initialized (Model: {cli_model})",
-                                metadata_json={
-                                    "cli_type": self.cli_type.value,
-                                    "mode": "SDK",
-                                    "model": cli_model,
-                                    "session_id": getattr(message_obj, 'session_id', None),
-                                    "hidden_from_ui": True
-                                },
-                                session_id=session_id,
-                                created_at=datetime.utcnow()
-                            )
-                            yield init_message
-                        
-                        # Handle AssistantMessage (complete messages)
-                        elif (isinstance(message_obj, AssistantMessage) or 
-                              'AssistantMessage' in str(type(message_obj))):
-                            
-                            content = ""
-                            
-                            # Process content - AssistantMessage has content: list[ContentBlock]
-                            if hasattr(message_obj, 'content') and isinstance(message_obj.content, list):
-                                for block in message_obj.content:
-                                    
-                                    # Import block types for comparison
-                                    from claude_code_sdk.types import TextBlock, ToolUseBlock, ToolResultBlock
-                                    
-                                    if isinstance(block, TextBlock):
-                                        # TextBlock has 'text' attribute
-                                        content += block.text
-                                    elif isinstance(block, ToolUseBlock):
-                                        # ToolUseBlock has 'id', 'name', 'input' attributes
-                                        tool_name = block.name
-                                        tool_input = block.input
-                                        tool_id = block.id
-                                        summary = self._create_tool_summary(tool_name, tool_input)
-                                            
-                                        # Yield tool use message immediately
-                                        tool_message = Message(
-                                            id=str(uuid.uuid4()),
-                                            project_id=project_path,
-                                            role="assistant",
-                                            message_type="tool_use",
-                                            content=summary,
-                                            metadata_json={
-                                                "cli_type": self.cli_type.value,
-                                                "mode": "SDK",
-                                                "tool_name": tool_name,
-                                                "tool_input": tool_input,
-                                                "tool_id": tool_id
-                                            },
-                                            session_id=session_id,
-                                            created_at=datetime.utcnow()
-                                        )
-                                        # Display clean tool usage like Claude Code
-                                        tool_display = self._get_clean_tool_display(tool_name, tool_input)
-                                        ui.info(tool_display, "")
-                                        yield tool_message
-                                    elif isinstance(block, ToolResultBlock):
-                                        # Handle tool result blocks if needed
-                                        pass
-                            
-                            # Yield complete assistant text message if there's text content
-                            if content and content.strip():
-                                text_message = Message(
-                                    id=str(uuid.uuid4()),
-                                    project_id=project_path,
-                                    role="assistant",
-                                    message_type="chat",
-                                    content=content.strip(),
-                                    metadata_json={
-                                        "cli_type": self.cli_type.value,
-                                        "mode": "SDK"
-                                    },
-                                    session_id=session_id,
-                                    created_at=datetime.utcnow()
-                                )
-                                yield text_message
-                        
-                        # Handle UserMessage (tool results, etc.)
-                        elif (isinstance(message_obj, UserMessage) or 
-                              'UserMessage' in str(type(message_obj))):
-                            # UserMessage has content: str according to types.py
-                            # UserMessages are typically tool results - we don't need to show them
-                            pass
-                        
-                        # Handle ResultMessage (final session completion)
-                        elif (
-                            isinstance(message_obj, ResultMessage) or
-                            'ResultMessage' in str(type(message_obj)) or
-                            (hasattr(message_obj, 'type') and getattr(message_obj, 'type', None) == 'result')
-                        ):
-                            ui.success(f"Session completed in {getattr(message_obj, 'duration_ms', 0)}ms", "Claude SDK")
-                            
-                            # Create internal result message (hidden from UI)
-                            result_message = Message(
-                                id=str(uuid.uuid4()),
-                                project_id=project_path,
-                                role="system",
-                                message_type="result",
-                                content=f"Session completed in {getattr(message_obj, 'duration_ms', 0)}ms",
-                                metadata_json={
-                                    "cli_type": self.cli_type.value,
-                                    "mode": "SDK",
-                                    "duration_ms": getattr(message_obj, 'duration_ms', 0),
-                                    "duration_api_ms": getattr(message_obj, 'duration_api_ms', 0),
-                                    "total_cost_usd": getattr(message_obj, 'total_cost_usd', 0),
-                                    "num_turns": getattr(message_obj, 'num_turns', 0),
-                                    "is_error": getattr(message_obj, 'is_error', False),
-                                    "subtype": getattr(message_obj, 'subtype', None),
-                                    "session_id": getattr(message_obj, 'session_id', None),
-                                    "hidden_from_ui": True  # Don't show to user
-                                },
-                                session_id=session_id,
-                                created_at=datetime.utcnow()
-                            )
-                            yield result_message
-                            break
-                        
-                        # Handle unknown message types
-                        else:
-                            ui.debug(f"Unknown message type: {type(message_obj)}", "Claude SDK")
+                # Stream responses and extract session_id functionality removed
             
             finally:
                 # Restore original working directory
