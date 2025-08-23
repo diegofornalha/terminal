@@ -16,13 +16,13 @@ const openBrowserOnce = () => {
   // Wait for server to be ready, then open browser
   setTimeout(async () => {
     try {
-      const url = 'http://localhost:3001';
+      const url = 'http://localhost:3005';
       // Dynamic import for ESM module
       const open = (await import('open')).default;
       await open(url);
       console.log(`\n🚀 Browser opened at ${url}`);
     } catch (error) {
-      console.log(`\n⚠️  Could not open browser automatically. Please visit http://localhost:3001 manually.`);
+      console.log(`\n⚠️  Could not open browser automatically. Please visit http://localhost:3005 manually.`);
       console.log('Error:', error.message);
     }
   }, 4000); // 4 second delay to ensure server is ready

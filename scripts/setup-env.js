@@ -10,7 +10,7 @@ const webEnvFile = path.join(rootDir, 'apps', 'web', '.env.local');
 
 // Default ports
 const DEFAULT_API_PORT = 8000;
-const DEFAULT_WEB_PORT = 3001; 
+const DEFAULT_WEB_PORT = 3005; 
 
 // Check if port is available
 function isPortAvailable(port) {
@@ -66,6 +66,12 @@ async function setupEnvironment() {
 API_PORT=${apiPort}
 WEB_PORT=${webPort}
 DATABASE_URL=sqlite:///${path.join(rootDir, 'data', 'cc.db')}
+
+# Neo4j Configuration
+NEO4J_URI=bolt://localhost:7687
+NEO4J_USERNAME=neo4j
+NEO4J_PASSWORD=password
+NEO4J_DATABASE=neo4j
 `;
     
     fs.writeFileSync(envFile, envContent);
