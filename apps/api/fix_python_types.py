@@ -40,7 +40,7 @@ def fix_file(filepath):
     return False
 
 # Fix all Python files in app directory
-app_dir = '/Users/2a/Desktop/Claudable/.conductor/karachi/apps/api/app'
+app_dir = '/Users/2a/Desktop/terminal/.conductor/karachi/apps/api/app'
 fixed_count = 0
 
 for root, dirs, files in os.walk(app_dir):

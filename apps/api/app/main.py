@@ -12,7 +12,7 @@ from app.api.settings import router as settings_router
 from app.api.project_services import router as project_services_router
 from app.api.github import router as github_router
 from app.api.vercel import router as vercel_router
-from app.api.claudable_interactive import router as claudable_interactive_router
+from app.api.claudable_interactive import router as terminal_interactive_router
 from app.core.logging import configure_logging
 from app.core.terminal_ui import ui
 from fastapi import WebSocket
@@ -67,13 +67,13 @@ app.include_router(settings_router)  # Settings API
 app.include_router(project_services_router)  # Project services API
 app.include_router(github_router)  # GitHub integration API
 app.include_router(vercel_router)  # Vercel integration API
-app.include_router(claudable_interactive_router)  # Terminal interativo com PTY
+app.include_router(terminal_interactive_router)  # Terminal interativo com PTY
 
 
-# ClaudableTerminal WebSocket endpoint
+# terminalTerminal WebSocket endpoint
 @app.websocket("/ws/terminal/{project_id}")
 async def terminal_endpoint(websocket: WebSocket, project_id: str):
-    """WebSocket endpoint para ClaudableTerminal"""
+    """WebSocket endpoint para terminalTerminal"""
     await terminal_ws.handle(websocket, project_id)
 
 

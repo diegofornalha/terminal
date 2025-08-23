@@ -1,4 +1,4 @@
-# Teste Manual do ClaudableTerminal
+# Teste Manual do terminalTerminal
 
 ## ✅ Componentes Implementados
 
@@ -9,7 +9,7 @@
 - ✅ Claude CLI instalado em `/opt/homebrew/bin/claude`
 
 ### Frontend (React/Next.js)
-- ✅ `ClaudableTerminal.tsx` - Componente React terminal
+- ✅ `terminalTerminal.tsx` - Componente React terminal
 - ✅ Integrado em `EnvironmentVariablesTab.tsx`
 - ✅ WebSocket client implementado
 - ✅ Botões de comando rápido
@@ -20,7 +20,7 @@
   - WebSocket: ws://localhost:8000/ws/terminal/{project_id}
   
 - **Next.js**: http://localhost:3005
-  - ClaudableTerminal visível na aba "Variáveis de Ambiente"
+  - terminalTerminal visível na aba "Variáveis de Ambiente"
 
 ## 📝 Como Testar
 
@@ -30,7 +30,7 @@
    - Vá para aba "Variáveis de Ambiente"
 
 2. **Terminal aparecerá quando não houver variáveis**:
-   - Se não houver variáveis configuradas, o ClaudableTerminal será exibido
+   - Se não houver variáveis configuradas, o terminalTerminal será exibido
    - Terminal mostra status de conexão e autenticação
 
 3. **Comandos disponíveis**:
@@ -72,7 +72,7 @@ claude --version
 
 ## ✅ Status Final
 
-**ClaudableTerminal MVP está FUNCIONAL e pronto para uso!**
+**terminalTerminal MVP está FUNCIONAL e pronto para uso!**
 
 ### Funcionalidades implementadas:
 1. ✅ Execução de comandos Claude CLI

@@ -1,6 +1,6 @@
 """
 Integration tests for Claude Code SDK
-Tests the complete integration with Claudable project
+Tests the complete integration with terminal project
 """
 
 import pytest

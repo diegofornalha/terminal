@@ -4,7 +4,7 @@ import os
 from typing import Dict, Optional
 from pathlib import Path
 
-class ClaudableTerminal:
+class terminalTerminal:
     """Terminal totalmente livre para qualquer comando"""
     
     def __init__(self, project_id: str):

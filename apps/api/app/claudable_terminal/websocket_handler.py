@@ -1,26 +1,26 @@
-"""WebSocket handler simples para ClaudableTerminal"""
+"""WebSocket handler simples para terminalTerminal"""
 from fastapi import WebSocket, WebSocketDisconnect
 from typing import Dict
 import json
 import asyncio
-from .terminal_simple import ClaudableTerminal
+from .terminal_simple import terminalTerminal
 from app.core.terminal_ui import ui
 
 class TerminalWebSocket:
     """Gerenciador de WebSocket para terminal"""
     
     def __init__(self):
-        self.terminals: Dict[str, ClaudableTerminal] = {}
+        self.terminals: Dict[str, terminalTerminal] = {}
         self.connections: Dict[str, WebSocket] = {}
     
     async def handle(self, websocket: WebSocket, project_id: str):
         """Gerencia conexão WebSocket para um projeto"""
         await websocket.accept()
-        ui.info(f"Terminal WebSocket conectado para projeto: {project_id}", "ClaudableTerminal")
+        ui.info(f"Terminal WebSocket conectado para projeto: {project_id}", "terminalTerminal")
         
         # Cria ou recupera terminal para este projeto
         if project_id not in self.terminals:
-            self.terminals[project_id] = ClaudableTerminal(project_id)
+            self.terminals[project_id] = terminalTerminal(project_id)
         
         terminal = self.terminals[project_id]
         self.connections[project_id] = websocket
@@ -45,7 +45,7 @@ class TerminalWebSocket:
                         if not command:
                             continue
                         
-                        ui.debug(f"Executando comando: {command}", "ClaudableTerminal")
+                        ui.debug(f"Executando comando: {command}", "terminalTerminal")
                         
                         # Envia feedback imediato
                         await websocket.send_json({
@@ -65,9 +65,9 @@ class TerminalWebSocket:
                         
                         # Log do resultado
                         if result['success']:
-                            ui.success(f"Comando executado: {command}", "ClaudableTerminal")
+                            ui.success(f"Comando executado: {command}", "terminalTerminal")
                         else:
-                            ui.warning(f"Comando falhou: {command}", "ClaudableTerminal")
+                            ui.warning(f"Comando falhou: {command}", "terminalTerminal")
                     
                     
                     elif message.get('type') == 'ping':
@@ -75,10 +75,10 @@ class TerminalWebSocket:
                         await websocket.send_json({'type': 'pong'})
                         
                 except WebSocketDisconnect:
-                    ui.info(f"Terminal desconectado: {project_id}", "ClaudableTerminal")
+                    ui.info(f"Terminal desconectado: {project_id}", "terminalTerminal")
                     break
                 except json.JSONDecodeError as e:
-                    ui.error(f"Erro ao decodificar JSON: {e}", "ClaudableTerminal")
+                    ui.error(f"Erro ao decodificar JSON: {e}", "terminalTerminal")
                     await websocket.send_json({
                         'type': 'error',
                         'message': 'Formato de mensagem inválido'
@@ -87,7 +87,7 @@ class TerminalWebSocket:
                     break
                     
         except Exception as e:
-            ui.error(f"Erro no WebSocket do terminal: {e}", "ClaudableTerminal")
+            ui.error(f"Erro no WebSocket do terminal: {e}", "terminalTerminal")
             try:
                 await websocket.send_json({
                     'type': 'error',
@@ -99,7 +99,7 @@ class TerminalWebSocket:
             # Limpa conexão
             if project_id in self.connections:
                 del self.connections[project_id]
-            ui.info(f"Terminal WebSocket finalizado para projeto: {project_id}", "ClaudableTerminal")
+            ui.info(f"Terminal WebSocket finalizado para projeto: {project_id}", "terminalTerminal")
     
     async def broadcast_to_project(self, project_id: str, message: Dict):
         """Envia mensagem para um projeto específico"""
@@ -107,9 +107,9 @@ class TerminalWebSocket:
             try:
                 await self.connections[project_id].send_json(message)
             except Exception as e:
-                ui.error(f"Erro ao enviar mensagem: {e}", "ClaudableTerminal")
+                ui.error(f"Erro ao enviar mensagem: {e}", "terminalTerminal")
     
-    def get_terminal(self, project_id: str) -> ClaudableTerminal:
+    def get_terminal(self, project_id: str) -> terminalTerminal:
         """Retorna o terminal de um projeto"""
         return self.terminals.get(project_id)
     

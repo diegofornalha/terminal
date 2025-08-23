@@ -1,7 +1,7 @@
 #!/bin/bash
-# Custom entrypoint for Claudable API with MCP setup
+# Custom entrypoint for terminal API with MCP setup
 
-echo "Starting Claudable API..."
+echo "Starting terminal API..."
 
 # Initialize Claude permissions and trust
 if [ -f "/app/scripts/claude-init-config.sh" ]; then

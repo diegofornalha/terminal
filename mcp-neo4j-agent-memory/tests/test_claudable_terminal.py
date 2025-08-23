@@ -1,4 +1,4 @@
-"""Teste do ClaudableTerminal WebSocket"""
+"""Teste do terminalTerminal WebSocket"""
 
 import asyncio
 import json
@@ -9,7 +9,7 @@ async def test_terminal():
     project_id = "test-project-123"
     uri = f"ws://localhost:8000/ws/terminal/{project_id}"
     
-    print(f"🔌 Conectando ao ClaudableTerminal: {uri}")
+    print(f"🔌 Conectando ao terminalTerminal: {uri}")
     
     try:
         async with websockets.connect(uri) as websocket:
@@ -88,7 +88,7 @@ async def test_terminal():
     return True
 
 if __name__ == "__main__":
-    print("🚀 Iniciando teste do ClaudableTerminal\n")
+    print("🚀 Iniciando teste do terminalTerminal\n")
     print("=" * 50)
     
     # Executa teste

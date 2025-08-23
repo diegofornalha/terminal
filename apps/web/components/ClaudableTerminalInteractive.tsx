@@ -127,8 +127,21 @@ export default function ClaudableTerminalInteractive({
   }, []);
 
   const connectWebSocket = () => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.hostname}:8000/ws/terminal/interactive/${projectId}`;
+    // Detecta o protocolo correto baseado na página atual
+    const isSecure = window.location.protocol === 'https:';
+    const wsProtocol = isSecure ? 'wss:' : 'ws:';
+    
+    // Se estiver em HTTPS, usa o mesmo host da página (com proxy)
+    // Se estiver em HTTP, pode conectar diretamente na API
+    let wsUrl;
+    if (isSecure) {
+      // Em HTTPS, usa o mesmo host/porta da aplicação web
+      wsUrl = `${wsProtocol}//${window.location.host}/ws/terminal/interactive/${projectId}`;
+    } else {
+      // Em HTTP, pode usar a variável de ambiente ou conectar diretamente
+      const apiHost = process.env.NEXT_PUBLIC_WS_BASE || `${wsProtocol}//${window.location.hostname}:8000`;
+      wsUrl = `${apiHost}/ws/terminal/interactive/${projectId}`;
+    }
     
     ws.current = new WebSocket(wsUrl);
 

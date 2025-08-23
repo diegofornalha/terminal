@@ -28,10 +28,11 @@ const openBrowserOnce = () => {
   }, 4000); // 4 second delay to ensure server is ready
 };
 
-// Start Next.js dev server
-const next = spawn('npx', ['next', 'dev', '--turbo'], {
+// Start custom server with WebSocket proxy support
+const next = spawn('node', ['server.js'], {
   stdio: 'inherit',
-  shell: true
+  shell: true,
+  env: { ...process.env, NODE_ENV: 'development' }
 });
 
 // Open browser once after server starts
