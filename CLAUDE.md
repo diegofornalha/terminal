@@ -2,6 +2,10 @@
 
 garanta que toda a documentação do neo4j esteja em pt br
 
+sempre que for criar algum arquivo não é pra gerar ele na raiz do projeto e sim na sua devida pasta 
+
+investigue e leia cada arquivo pra entender ao tentar resolver um problema vc precisa ter contexto 100%, vai no detalhe e não se preoculpe em terminar logo, garanta que vai fazer exatamente o que eu te pedi.           
+
 ## 🧠 REGRA PRINCIPAL: Neo4j é a Fonte da Verdade
 SEMPRE consulte o Neo4j antes de qualquer ação para ter contexto completo.
 
