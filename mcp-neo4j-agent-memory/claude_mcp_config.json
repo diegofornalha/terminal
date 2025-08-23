@@ -1,0 +1,49 @@
+{
+  "name": "neo4j-memory",
+  "description": "Graph-based memory system for AI agents using Neo4j",
+  "config": {
+    "command": "node",
+    "args": ["${INSTALLATION_DIR}/build/index.js"],
+    "env": {
+      "NEO4J_URI": "${NEO4J_URI:-bolt://localhost:7687}",
+      "NEO4J_USERNAME": "${NEO4J_USERNAME:-neo4j}",
+      "NEO4J_PASSWORD": "${NEO4J_PASSWORD}",
+      "NEO4J_DATABASE": "${NEO4J_DATABASE:-neo4j}"
+    }
+  },
+  "installation": {
+    "type": "local",
+    "source": ".",
+    "build": "npm install && npm run build"
+  },
+  "requirements": {
+    "node": ">=18.0.0",
+    "neo4j": ">=4.0.0"
+  },
+  "prompts": [
+    {
+      "name": "NEO4J_PASSWORD",
+      "message": "Enter your Neo4j password:",
+      "type": "password",
+      "required": true
+    },
+    {
+      "name": "NEO4J_URI",
+      "message": "Enter Neo4j URI (default: bolt://localhost:7687):",
+      "type": "text",
+      "default": "bolt://localhost:7687"
+    },
+    {
+      "name": "NEO4J_USERNAME",
+      "message": "Enter Neo4j username (default: neo4j):",
+      "type": "text",
+      "default": "neo4j"
+    },
+    {
+      "name": "NEO4J_DATABASE",
+      "message": "Enter Neo4j database name (default: neo4j):",
+      "type": "text",
+      "default": "neo4j"
+    }
+  ]
+}
