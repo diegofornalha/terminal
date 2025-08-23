@@ -10,6 +10,11 @@ from typing import Any, Optional, Dict, List
 from datetime import datetime
 from neo4j import GraphDatabase
 from mcp.server.fastmcp import FastMCP
+try:
+    from .self_improve import SelfImprover, get_context_before_action
+except ImportError:
+    # Para execução direta do script
+    from self_improve import SelfImprover, get_context_before_action
 
 # Configurar logging para stderr (nunca stdout!)
 logging.basicConfig(
@@ -107,7 +112,11 @@ def search_memories(
     if query:
         where_clauses.append(
             "ANY(prop IN keys(n) WHERE "
-            "toString(n[prop]) CONTAINS $query)"
+            "(n[prop] IS NOT NULL AND "
+            "CASE "
+            "WHEN n[prop] IS :: LIST THEN ANY(item IN n[prop] WHERE toString(item) CONTAINS $query) "
+            "ELSE toString(n[prop]) CONTAINS $query "
+            "END))"
         )
         params["query"] = query
     
@@ -396,6 +405,116 @@ def delete_connection(
         return {"status": "success", "message": "Conexão deletada"}
     
     raise Exception("Conexão não encontrada")
+
+
+@mcp.tool()
+def get_context_for_task(task_description: str) -> str:
+    """
+    Busca contexto e conhecimento relevante antes de executar uma tarefa
+    
+    Args:
+        task_description: Descrição da tarefa a ser executada
+    
+    Returns:
+        Contexto relevante incluindo regras, conhecimento e avisos
+    """
+    return get_context_before_action(neo4j_conn, task_description)
+
+
+@mcp.tool()
+def learn_from_result(
+    task: str,
+    result: str,
+    success: bool = True,
+    category: Optional[str] = None
+) -> Dict[str, str]:
+    """
+    Registra aprendizado de uma execução no grafo
+    
+    Args:
+        task: Tarefa executada
+        result: Resultado obtido
+        success: Se foi bem-sucedido
+        category: Categoria do aprendizado (opcional)
+    
+    Returns:
+        Confirmação do aprendizado salvo
+    """
+    improver = SelfImprover(neo4j_conn)
+    improver.learn_from_execution(task, result, success)
+    
+    if category:
+        learning = {
+            "name": f"{category}_{datetime.now().timestamp()}",
+            "task": task,
+            "result": result,
+            "success": success
+        }
+        improver.save_learning(category, learning)
+    
+    return {
+        "status": "learned",
+        "message": f"Aprendizado {'positivo' if success else 'de erro'} registrado"
+    }
+
+
+@mcp.tool()
+def suggest_best_approach(current_task: str) -> Dict[str, Any]:
+    """
+    Sugere a melhor abordagem baseada no conhecimento do grafo
+    
+    Args:
+        current_task: Descrição da tarefa atual
+    
+    Returns:
+        Sugestões incluindo regras, conhecimento relevante e decisões passadas
+    """
+    improver = SelfImprover(neo4j_conn)
+    suggestions = improver.suggest_improvements(current_task)
+    
+    # Formatar resposta
+    response = {
+        "task": current_task,
+        "suggestions": []
+    }
+    
+    # Adicionar regras mais importantes
+    if suggestions["rules"]:
+        response["important_rules"] = [
+            r["description"] for r in suggestions["rules"][:3]
+            if r.get("description")
+        ]
+    
+    # Adicionar conhecimento relevante
+    if suggestions["relevant_knowledge"]:
+        response["relevant_knowledge"] = [
+            {
+                "type": k["labels"][0] if k.get("labels") else "unknown",
+                "name": k.get("name", ""),
+                "info": k.get("description", k.get("content", ""))[:100]
+            }
+            for k in suggestions["relevant_knowledge"][:3]
+        ]
+    
+    # Adicionar decisões passadas
+    if suggestions["past_decisions"]:
+        response["past_decisions"] = [
+            {
+                "topic": d.get("topic"),
+                "decision": d.get("decision"),
+                "outcome": d.get("outcome")
+            }
+            for d in suggestions["past_decisions"][:2]
+        ]
+    
+    # Adicionar avisos
+    if suggestions["warnings"]:
+        response["warnings"] = [
+            f"{w.get('type', '')}: {w.get('solution', '')}"
+            for w in suggestions["warnings"]
+        ]
+    
+    return response
 
 
 @mcp.tool()
