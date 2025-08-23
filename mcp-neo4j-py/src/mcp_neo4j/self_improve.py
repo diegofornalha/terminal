@@ -34,11 +34,7 @@ class SelfImprover:
         query = """
         MATCH (n)
         WHERE ANY(prop IN keys(n) WHERE 
-            (n[prop] IS NOT NULL AND 
-            CASE 
-            WHEN n[prop] IS :: LIST THEN ANY(item IN n[prop] WHERE toString(item) CONTAINS $context)
-            ELSE toString(n[prop]) CONTAINS $context
-            END))
+            n[prop] IS NOT NULL AND toString(n[prop]) CONTAINS $context)
         RETURN labels(n) as labels, 
                n.name as name,
                n.description as description,

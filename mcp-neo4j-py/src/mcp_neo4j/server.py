@@ -10,11 +10,20 @@ from typing import Any, Optional, Dict, List
 from datetime import datetime
 from neo4j import GraphDatabase
 from mcp.server.fastmcp import FastMCP
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 try:
     from .self_improve import SelfImprover, get_context_before_action
+    from .autonomous import AutonomousImprover, activate_autonomous_mode
 except ImportError:
     # Para execução direta do script
     from self_improve import SelfImprover, get_context_before_action
+    from autonomous import AutonomousImprover, activate_autonomous_mode
+
+import asyncio
+import threading
 
 # Configurar logging para stderr (nunca stdout!)
 logging.basicConfig(
@@ -76,6 +85,10 @@ class Neo4jConnection:
 # Instância global da conexão
 neo4j_conn = Neo4jConnection()
 
+# Instância global do sistema autônomo
+autonomous_system = None
+autonomous_thread = None
+
 
 @mcp.tool()
 def search_memories(
@@ -112,11 +125,7 @@ def search_memories(
     if query:
         where_clauses.append(
             "ANY(prop IN keys(n) WHERE "
-            "(n[prop] IS NOT NULL AND "
-            "CASE "
-            "WHEN n[prop] IS :: LIST THEN ANY(item IN n[prop] WHERE toString(item) CONTAINS $query) "
-            "ELSE toString(n[prop]) CONTAINS $query "
-            "END))"
+            "n[prop] IS NOT NULL AND toString(n[prop]) CONTAINS $query)"
         )
         params["query"] = query
     
@@ -134,10 +143,21 @@ def search_memories(
     memories = []
     for record in results:
         node = record["n"]
+        # Converter propriedades para formato serializável
+        props = {}
+        for key, value in dict(node).items():
+            # Converter DateTime do Neo4j para string
+            if hasattr(value, 'iso_format'):
+                props[key] = value.iso_format()
+            elif hasattr(value, 'isoformat'):
+                props[key] = value.isoformat()
+            else:
+                props[key] = value
+        
         memory = {
             "id": node.element_id if hasattr(node, 'element_id') else node.id,
             "labels": record["labels"],
-            "properties": dict(node)
+            "properties": props
         }
         memories.append(memory)
     
@@ -175,10 +195,21 @@ def create_memory(
     
     if results:
         record = results[0]
+        node = record["n"]
+        # Converter propriedades para formato serializável
+        props = {}
+        for key, value in dict(node).items():
+            if hasattr(value, 'iso_format'):
+                props[key] = value.iso_format()
+            elif hasattr(value, 'isoformat'):
+                props[key] = value.isoformat()
+            else:
+                props[key] = value
+        
         return {
             "id": record["id"],
             "labels": record["labels"],
-            "properties": dict(record["n"])
+            "properties": props
         }
     
     raise Exception("Falha ao criar memória")
@@ -222,9 +253,20 @@ def create_connection(
     results = neo4j_conn.execute_query(cypher, params)
     
     if results:
+        rel = results[0]["r"]
+        # Converter propriedades para formato serializável
+        props = {}
+        for key, value in dict(rel).items():
+            if hasattr(value, 'iso_format'):
+                props[key] = value.iso_format()
+            elif hasattr(value, 'isoformat'):
+                props[key] = value.isoformat()
+            else:
+                props[key] = value
+        
         return {
             "type": results[0]["type"],
-            "properties": dict(results[0]["r"]),
+            "properties": props,
             "from": from_memory_id,
             "to": to_memory_id
         }
@@ -263,10 +305,21 @@ def update_memory(
     
     if results:
         record = results[0]
+        node = record["n"]
+        # Converter propriedades para formato serializável
+        props = {}
+        for key, value in dict(node).items():
+            if hasattr(value, 'iso_format'):
+                props[key] = value.iso_format()
+            elif hasattr(value, 'isoformat'):
+                props[key] = value.isoformat()
+            else:
+                props[key] = value
+        
         return {
             "id": node_id,
             "labels": record["labels"],
-            "properties": dict(record["n"])
+            "properties": props
         }
     
     raise Exception("Memória não encontrada")
@@ -360,9 +413,20 @@ def update_connection(
     results = neo4j_conn.execute_query(cypher, params)
     
     if results:
+        rel = results[0]["r"]
+        # Converter propriedades para formato serializável
+        props = {}
+        for key, value in dict(rel).items():
+            if hasattr(value, 'iso_format'):
+                props[key] = value.iso_format()
+            elif hasattr(value, 'isoformat'):
+                props[key] = value.isoformat()
+            else:
+                props[key] = value
+        
         return {
             "type": results[0]["type"],
-            "properties": dict(results[0]["r"]),
+            "properties": props,
             "from": from_memory_id,
             "to": to_memory_id
         }
@@ -513,6 +577,185 @@ def suggest_best_approach(current_task: str) -> Dict[str, Any]:
             f"{w.get('type', '')}: {w.get('solution', '')}"
             for w in suggestions["warnings"]
         ]
+    
+    return response
+
+
+@mcp.tool()
+def activate_autonomous() -> Dict[str, str]:
+    """
+    Ativa o modo autônomo de auto-aprimoramento
+    
+    O sistema irá:
+    - Monitorar continuamente o Neo4j
+    - Aprender com novos dados automaticamente
+    - Detectar e salvar padrões
+    - Aplicar aprendizados
+    - Consolidar conhecimento
+    
+    Returns:
+        Status da ativação
+    """
+    global autonomous_system, autonomous_thread
+    
+    if autonomous_system and autonomous_system.running:
+        return {
+            "status": "already_active",
+            "message": "Sistema autônomo já está ativo"
+        }
+    
+    try:
+        # Criar instância do sistema autônomo
+        improver = SelfImprover(neo4j_conn)
+        autonomous_system = AutonomousImprover(neo4j_conn, improver)
+        
+        # Executar em thread separada
+        def run_autonomous():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(autonomous_system.start())
+        
+        autonomous_thread = threading.Thread(target=run_autonomous, daemon=True)
+        autonomous_thread.start()
+        
+        # Salvar estado no Neo4j
+        neo4j_conn.execute_query("""
+            CREATE (a:AutonomousMode {
+                activated_at: datetime(),
+                status: 'active',
+                monitoring_interval: 30
+            })
+        """)
+        
+        logger.info("🤖 Modo autônomo ativado com sucesso")
+        
+        return {
+            "status": "activated",
+            "message": "Sistema autônomo ativado - monitorando e aprendendo continuamente",
+            "features": [
+                "Monitoramento contínuo a cada 30 segundos",
+                "Aplicação automática de aprendizados",
+                "Detecção de padrões",
+                "Consolidação de conhecimento",
+                "Limpeza automática de dados obsoletos"
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao ativar modo autônomo: {e}")
+        return {
+            "status": "error",
+            "message": f"Erro ao ativar: {str(e)}"
+        }
+
+
+@mcp.tool()
+def deactivate_autonomous() -> Dict[str, str]:
+    """
+    Desativa o modo autônomo
+    
+    Returns:
+        Status da desativação
+    """
+    global autonomous_system
+    
+    if not autonomous_system or not autonomous_system.running:
+        return {
+            "status": "not_active",
+            "message": "Sistema autônomo não está ativo"
+        }
+    
+    try:
+        autonomous_system.stop()
+        
+        # Atualizar estado no Neo4j
+        neo4j_conn.execute_query("""
+            MATCH (a:AutonomousMode {status: 'active'})
+            SET a.status = 'inactive',
+                a.deactivated_at = datetime()
+        """)
+        
+        logger.info("🛑 Modo autônomo desativado")
+        
+        return {
+            "status": "deactivated",
+            "message": "Sistema autônomo desativado com sucesso"
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao desativar modo autônomo: {e}")
+        return {
+            "status": "error",
+            "message": f"Erro ao desativar: {str(e)}"
+        }
+
+
+@mcp.tool()
+def autonomous_status() -> Dict[str, Any]:
+    """
+    Verifica o status do sistema autônomo
+    
+    Returns:
+        Status detalhado do sistema
+    """
+    global autonomous_system
+    
+    # Buscar status no Neo4j
+    result = neo4j_conn.execute_query("""
+        MATCH (a:AutonomousMode)
+        RETURN a
+        ORDER BY a.activated_at DESC
+        LIMIT 1
+    """)
+    
+    neo4j_status = result[0]["a"] if result else None
+    
+    response = {
+        "active": autonomous_system and autonomous_system.running,
+        "monitoring_interval": autonomous_system.monitoring_interval if autonomous_system else None,
+        "last_check": autonomous_system.last_check.isoformat() if autonomous_system and hasattr(autonomous_system, 'last_check') else None
+    }
+    
+    if neo4j_status:
+        # Converter DateTime para string
+        activated_at = neo4j_status.get("activated_at")
+        deactivated_at = neo4j_status.get("deactivated_at")
+        
+        if hasattr(activated_at, 'iso_format'):
+            activated_at = activated_at.iso_format()
+        elif hasattr(activated_at, 'isoformat'):
+            activated_at = activated_at.isoformat()
+        
+        if hasattr(deactivated_at, 'iso_format'):
+            deactivated_at = deactivated_at.iso_format()
+        elif hasattr(deactivated_at, 'isoformat'):
+            deactivated_at = deactivated_at.isoformat()
+        
+        response["neo4j_status"] = {
+            "status": neo4j_status.get("status"),
+            "activated_at": activated_at,
+            "deactivated_at": deactivated_at
+        }
+    
+    # Buscar estatísticas
+    stats = neo4j_conn.execute_query("""
+        MATCH (l:Learning)
+        WITH count(l) as total_learnings,
+             sum(CASE WHEN l.applied = true THEN 1 ELSE 0 END) as applied_learnings
+        MATCH (p:Pattern)
+        WITH total_learnings, applied_learnings, count(p) as patterns_detected
+        MATCH (e:Error)
+        WITH total_learnings, applied_learnings, patterns_detected, count(e) as errors_logged
+        RETURN total_learnings, applied_learnings, patterns_detected, errors_logged
+    """)
+    
+    if stats:
+        response["statistics"] = {
+            "total_learnings": stats[0].get("total_learnings", 0),
+            "applied_learnings": stats[0].get("applied_learnings", 0),
+            "patterns_detected": stats[0].get("patterns_detected", 0),
+            "errors_logged": stats[0].get("errors_logged", 0)
+        }
     
     return response
 
