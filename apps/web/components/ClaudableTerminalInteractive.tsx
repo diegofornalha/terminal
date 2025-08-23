@@ -21,9 +21,22 @@ export default function ClaudableTerminalInteractive({
   const ws = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [isSessionStarted, setIsSessionStarted] = useState(false);
+  const [sessionId, setSessionId] = useState<string>('');
+
+  // Gerar ou recuperar sessionId único
+  useEffect(() => {
+    const storedSessionId = localStorage.getItem(`terminal_session_${projectId}`);
+    if (storedSessionId) {
+      setSessionId(storedSessionId);
+    } else {
+      const newSessionId = `${projectId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      localStorage.setItem(`terminal_session_${projectId}`, newSessionId);
+      setSessionId(newSessionId);
+    }
+  }, [projectId]);
 
   useEffect(() => {
-    if (!terminalRef.current) return;
+    if (!terminalRef.current || !sessionId) return;
 
     // Pequeno delay para garantir que o DOM está pronto
     const timer = setTimeout(() => {
@@ -124,7 +137,7 @@ export default function ClaudableTerminalInteractive({
         terminal.current.dispose();
       }
     };
-  }, []);
+  }, [sessionId]);
 
   const connectWebSocket = () => {
     // Detecta o protocolo correto baseado na página atual
