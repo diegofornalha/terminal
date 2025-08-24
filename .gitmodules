@@ -1,3 +1,8 @@
-[submodule "mcp-neo4j-agent-memory"]
-	path = mcp-neo4j-agent-memory
-	url = https://github.com/diegofornalha/mcp-neo4j-agent-memory.git
+[submodule "memoria-neo4j-repo"]
+	path = memoria-neo4j-repo
+	url = https://github.com/diegofornalha/memoria-neo4j-repo.git
+	branch = main
+
+[submodule "mcp-neo4j-py"]
+	path = mcp-neo4j-py
+	url = https://github.com/diegofornalha/mcp-neo4j-py.git
