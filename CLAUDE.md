@@ -9,6 +9,24 @@ investigue e leia cada arquivo pra entender ao tentar resolver um problema vc pr
 ## 🧠 REGRA PRINCIPAL: Neo4j é a Fonte da Verdade
 SEMPRE consulte o Neo4j antes de qualquer ação para ter contexto completo.
 
+## 🎯 MATRIZ DE DECISÃO DO ORCHESTRATOR
+
+### Detecção Automática de Padrões → Ativação de Sub-Agentes
+| **Padrão Detectado** | **Sub-Agente Ativado** | **Trigger** |
+|---------------------|------------------------|-------------|
+| "complexo demais", "muitas camadas", "abstração" | 🔧 `layer-simplifier` | >2 intermediários detectados |
+| "limpar neo4j", "muitos nós", "complexidade" | 🧹 `neo4j-cleaner` | >100 nós no grafo |
+| "vale a pena?", "muito trabalho", "pouco retorno" | 💰 `roi-guardian` | ROI < 10% |
+| "tutorial", "documentação", "explicar" | 🥷 `mcp-shadow-agent` | Sempre ativo silenciosamente |
+| "monitorar", "automático", "contínuo" | 🤖 `mcp-autonomous-agent` | Modo autônomo |
+
+### Fluxo de Interceptação
+1. **UserPromptSubmit Hook** → Intercepta TODOS os prompts
+2. **Orchestrator Master** → Analisa e decide
+3. **Consulta Neo4j** → Busca contexto relevante
+4. **Aplica CLAUDE.md** → Segue diretrizes
+5. **Ativa Sub-Agentes** → Conforme padrões detectados
+
 ## 📋 REGRAS FUNDAMENTAIS
 
 ### 1. Metodologia PRP (Preserve, Retrieve, Process)
@@ -77,6 +95,31 @@ MATCH (d:Documentation) RETURN d.name, d.content
 - ✔️ Atualizar ao invés de duplicar
 - ✔️ Documentar no grafo
 - ✔️ Fazer backup regularmente
+
+## 🎯 PRINCÍPIO DO EQUILÍBRIO (SABER QUANDO PARAR)
+
+### Reconhecer o Ponto de Saturação Produtiva
+**FUNDAMENTAL**: Saber identificar quando o sistema está suficientemente bom e parar antes de complicar desnecessariamente.
+
+#### Sinais de que é hora de PARAR:
+- ✅ Funcionalidade principal implementada e funcionando
+- ✅ Sistema estável e operacional
+- ✅ Benefício marginal < Complexidade adicional
+- ✅ Risco de "overengineering" presente
+
+#### Filosofia:
+> "A perfeição não é quando não há mais nada para adicionar, mas quando não há mais nada para remover." - Antoine de Saint-Exupéry
+
+### Diretrizes Práticas:
+1. **95% é melhor que 100% complexo** - Um sistema 95% completo e simples é melhor que 100% completo e impossível de manter
+2. **KISS (Keep It Simple, Stupid)** - Simplicidade sempre vence complexidade desnecessária
+3. **ROI decrescente** - Quando o retorno sobre investimento de tempo/esforço diminui drasticamente, PARE
+4. **Manutenibilidade > Perfeição** - Código simples que outros entendem > código "perfeito" que só você entende
+
+### Aplicação:
+- Avaliar constantemente: "Isso REALMENTE adiciona valor?"
+- Preferir iterações futuras vs perfeição imediata
+- Documentar o que foi feito e PARAR quando estiver BOM O SUFICIENTE
 
 ---
 **Responder sempre em PT-BR**
