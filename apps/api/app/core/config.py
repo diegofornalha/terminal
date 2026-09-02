@@ -34,13 +34,11 @@ PROJECT_ROOT = find_project_root()
 class Settings(BaseModel):
     api_port: int = int(os.getenv("API_PORT", "8000"))
     
-    # Database URL - Neo4j is used instead of SQLite
     database_url: str = os.getenv(
         "DATABASE_URL",
-        "neo4j://localhost:7687",  # Neo4j default connection
+        "sqlite:///./data/terminal.db",
     )
-    
-    # Use project root relative paths - Neo4j handles project data
+
     projects_root: str = os.getenv("PROJECTS_ROOT", str(PROJECT_ROOT / "projects"))
     projects_root_host: str = os.getenv("PROJECTS_ROOT_HOST", os.getenv("PROJECTS_ROOT", str(PROJECT_ROOT / "projects")))
     

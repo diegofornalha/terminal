@@ -1,5 +1,5 @@
-# Neo4j is used instead of SQLite - this is a stub to prevent import errors
-# The actual database operations are handled by Neo4j services
+# Stub database layer: the terminal app does not use a real database.
+# These stubs keep the routers that expect a SQLAlchemy session importable.
 
 from typing import Generator
 from app.core.config import settings
@@ -23,7 +23,7 @@ class StubSession:
 SessionLocal = StubSession
 
 def get_db() -> Generator[StubSession, None, None]:
-    """Database session dependency - returns stub for Neo4j compatibility"""
+    """Database session dependency - returns a no-op stub session"""
     db = StubSession()
     try:
         yield db

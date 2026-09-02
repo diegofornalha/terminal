@@ -17,7 +17,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from app.services.claude_code_client import ClaudeSDKClient, ClaudeCodeOptions
 from app.services.claude_sdk_wrapper import ClaudeSDKWrapper, get_claude_wrapper
 from app.services.claude_tools_config import ClaudeToolsConfig, PermissionMode
-from app.services.session_manager import SessionManager, get_session_manager
 from app.services.claude_debug_monitor import ClaudeDebugMonitor, get_debug_monitor
 from app.core.websocket.claude_streaming import ClaudeStreamingHandler
 
@@ -203,99 +202,6 @@ class TestClaudeToolsConfig:
         assert "Bash" in new_config.blocked_tools
 
 
-class TestSessionManager:
-    """Test session management"""
-    
-    @pytest.mark.asyncio
-    async def test_create_session(self, tmp_path):
-        """Test session creation"""
-        manager = SessionManager(str(tmp_path))
-        
-        session_id = await manager.create_session("user123", "project456")
-        
-        assert session_id is not None
-        assert "user123" in session_id
-        assert "project456" in session_id
-        assert session_id in manager.active_sessions
-        
-    @pytest.mark.asyncio
-    async def test_update_session(self, tmp_path):
-        """Test session update"""
-        manager = SessionManager(str(tmp_path))
-        session_id = await manager.create_session("user123", "project456")
-        
-        await manager.update_session(session_id, {
-            "custom_field": "test_value"
-        })
-        
-        session = manager.active_sessions[session_id]
-        assert session["custom_field"] == "test_value"
-        
-    @pytest.mark.asyncio
-    async def test_add_tool_usage(self, tmp_path):
-        """Test recording tool usage"""
-        manager = SessionManager(str(tmp_path))
-        session_id = await manager.create_session("user123", "project456")
-        
-        await manager.add_tool_usage(
-            session_id,
-            "Read",
-            {"file_path": "test.py"},
-            "file content",
-            100.5
-        )
-        
-        session = manager.active_sessions[session_id]
-        assert len(session["tools_used"]) == 1
-        assert session["tools_used"][0]["tool_name"] == "Read"
-        
-    @pytest.mark.asyncio
-    async def test_session_persistence(self, tmp_path):
-        """Test session persistence to disk"""
-        manager = SessionManager(str(tmp_path))
-        session_id = await manager.create_session("user123", "project456")
-        
-        # Update session
-        await manager.update_session(session_id, {"test": "data"})
-        
-        # End session
-        await manager.end_session(session_id)
-        
-        # Try to resume
-        resumed = await manager.resume_session(session_id)
-        assert resumed is not None
-        assert resumed["test"] == "data"
-        assert resumed["status"] == "completed"
-        
-    @pytest.mark.asyncio
-    async def test_session_history(self, tmp_path):
-        """Test getting session history"""
-        manager = SessionManager(str(tmp_path))
-        
-        # Create multiple sessions
-        for i in range(3):
-            await manager.create_session(f"user{i}", "project1")
-            
-        history = await manager.get_session_history(project_id="project1")
-        assert len(history) == 3
-        
-    @pytest.mark.asyncio
-    async def test_export_session(self, tmp_path):
-        """Test session export"""
-        manager = SessionManager(str(tmp_path))
-        session_id = await manager.create_session("user123", "project456")
-        
-        export_path = await manager.export_session(session_id, str(tmp_path / "export.json"))
-        
-        assert export_path is not None
-        assert Path(export_path).exists()
-        
-        # Verify export content
-        with open(export_path, 'r') as f:
-            exported = json.load(f)
-            assert exported["id"] == session_id
-
-
 class TestClaudeDebugMonitor:
     """Test debug and monitoring"""
     
@@ -434,13 +340,11 @@ async def test_end_to_end_integration():
     
     # Initialize components
     wrapper = get_claude_wrapper()
-    session_manager = get_session_manager()
     debug_monitor = get_debug_monitor()
     tools_config = ClaudeToolsConfig()
-    
-    # Create session
-    session_id = await session_manager.create_session("test_user", "test_project")
-    
+
+    session_id = "test_user_test_project_session"
+
     # Configure tools
     tools_config.set_permission_mode(PermissionMode.SAFE_MODE)
     
@@ -464,12 +368,7 @@ async def test_end_to_end_integration():
             
     # Verify integration
     assert len(messages) > 0
-    
-    # Update session
-    await session_manager.update_session(session_id, {
-        "test_complete": True
-    })
-    
+
     # End tracking
     debug_monitor.end_operation(operation_id, success=True)
     
@@ -479,10 +378,7 @@ async def test_end_to_end_integration():
     
     assert performance_report is not None
     assert session_stats is not None
-    
-    # Cleanup
-    await session_manager.end_session(session_id)
-    
+
     print("✅ End-to-end integration test passed!")
 
 

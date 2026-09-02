@@ -60,9 +60,6 @@ Thumbs.db
 logs/
 *.log
 
-# Docker
-.dockerignore
-
 # Testing
 .coverage
 .pytest_cache/
@@ -83,9 +80,6 @@ backup/
 # Development files
 output.txt
 result.md
-
-# Docker volumes
-docker-data/
 
 # Project workspaces
 data/

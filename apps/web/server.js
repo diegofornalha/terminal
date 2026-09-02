@@ -23,7 +23,7 @@ app.prepare().then(() => {
   });
 
   // WebSocket proxy configuration
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://api:8000';
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000';
   console.log('API base for proxy:', apiBase);
   
   // Convert http to ws for WebSocket proxy

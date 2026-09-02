@@ -17,7 +17,6 @@ from app.core.logging import configure_logging
 from app.core.terminal_ui import ui
 from fastapi import WebSocket
 from app.claudable_terminal.websocket_handler import terminal_ws
-# Neo4j is used instead of SQLite - no SQLAlchemy imports needed
 import os
 
 configure_logging()
@@ -82,10 +81,6 @@ def health():
 
 @app.on_event("startup")
 def on_startup() -> None:
-    # Neo4j is used instead of SQLite - no table creation needed
-    ui.info("Neo4j database is ready")
-    ui.success("Database initialization complete")
-    
     # Show available endpoints
     ui.info("API server ready")
     ui.panel(
