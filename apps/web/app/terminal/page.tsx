@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 
 // Importa o terminal de forma dinâmica para evitar SSR
-const ClaudableTerminalInteractive = dynamic(
-  () => import('../../components/ClaudableTerminalInteractive'),
+const TerminalInteractive = dynamic(
+  () => import('../../components/TerminalInteractive'),
   { 
     ssr: false,
     loading: () => (
@@ -38,6 +38,6 @@ export default function TerminalInteractivePage() {
   }
 
   return (
-    <ClaudableTerminalInteractive projectId="interactive-test" />
+    <TerminalInteractive projectId="interactive-test" />
   );
 }

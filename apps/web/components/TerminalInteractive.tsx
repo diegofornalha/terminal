@@ -9,7 +9,7 @@ interface Props {
   projectId?: string;
 }
 
-export default function ClaudableTerminalInteractive({ projectId }: Props) {
+export default function TerminalInteractive({ projectId }: Props) {
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminalInstance = useRef<Terminal | null>(null);
 
@@ -39,10 +39,11 @@ export default function ClaudableTerminalInteractive({ projectId }: Props) {
     }
 
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const apiPort = process.env.NEXT_PUBLIC_API_PORT || '8000';
     const wsHost =
       window.location.protocol === 'https:'
         ? window.location.host
-        : `${window.location.hostname}:8000`;
+        : `${window.location.hostname}:${apiPort}`;
     const wsUrl = `${wsProtocol}//${wsHost}/ws/terminal/interactive/${sessionId}`;
 
     const ws = new WebSocket(wsUrl);
